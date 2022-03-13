@@ -348,7 +348,7 @@ class UiManager():
             mouse.click(button="left")
             wait(0.3, 0.4)
 
-    def stash_all_items(self, num_loot_columns: int, item_finder: ItemFinder):
+    def stash_all_items(self, num_loot_columns: int, item_finder: ItemFinder, forceKeep: bool = False):
         """
         Stashing all items in inventory. Stash UI must be open when calling the function.
         :param num_loot_columns: Number of columns used for loot from left
@@ -411,8 +411,11 @@ class UiManager():
                 # check item again and discard it or stash it
                 wait(1.2, 1.4)
                 hovered_item = self._screen.grab()
-                found_items = self._keep_item(item_finder, hovered_item)
-                if len(found_items) > 0:
+
+                if not forceKeep:
+                    found_items = self._keep_item(item_finder, hovered_item)
+
+                if forceKeep or len(found_items) > 0:
                     keyboard.send('ctrl', do_release=False)
                     wait(0.2, 0.25)
                     mouse.press(button="left")
@@ -428,7 +431,8 @@ class UiManager():
                         Logger.debug("Wanted to stash item, but its still in inventory. Assumes full stash. Move to next.")
                         break
                     else:
-                        self._game_stats.log_item_keep(found_items[0].name, self._config.items[found_items[0].name].pickit_type == 2, hovered_item)
+                        if not forceKeep:
+                            self._game_stats.log_item_keep(found_items[0].name, self._config.items[found_items[0].name].pickit_type == 2, hovered_item)
                 else:
                     # make sure there is actually an item
                     time.sleep(0.3)

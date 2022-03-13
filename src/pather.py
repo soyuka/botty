@@ -309,6 +309,7 @@ class Pather:
             (Location.A5_LARZUK, Location.A5_QUAL_KEHK): [13, 14, 5, 6, 10, 11, 12],
             (Location.A5_LARZUK, Location.A5_NIHLATHAK_PORTAL): [14, 13, 5, 6, 8, 9],
             (Location.A5_LARZUK, Location.A5_WP): [14, 13, 5],
+            (Location.A5_LARZUK, Location.A5_STASH): [14, 13],
             # Pindle
             (Location.A5_PINDLE_START, Location.A5_PINDLE_SAFE_DIST): [100, 101, 102, 103],
             (Location.A5_PINDLE_SAFE_DIST, Location.A5_PINDLE_END): [104],

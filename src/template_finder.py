@@ -70,7 +70,8 @@ class TemplateFinder:
         normalize_monitor: bool = False,
         best_match: bool = False,
         use_grayscale: bool = False,
-    ) -> TemplateMatch:
+        every_matches: bool = False,
+    ) -> TemplateMatch or list[TemplateMatch]:
         """
         Search for a template in an image
         :param ref: Either key of a already loaded template, list of such keys, or a image which is used as template
@@ -80,7 +81,8 @@ class TemplateFinder:
         :param normalize_monitor: If True will return positions in monitor coordinates. Otherwise in coordinates of the input image.
         :param best_match: If list input, will search for list of templates by best match. Default behavior is first match.
         :param use_grayscale: Use grayscale template matching for speed up
-        :return: Returns a TempalteMatch object with a valid flag
+        :param every_matches: Returns a list of all the matches (TODO: merge this with best_match using a flag)
+        :return: Returns a TemplateMatch object with a valid flag
         """
         if roi is None:
             # if no roi is provided roi = full inp_img
@@ -108,6 +110,7 @@ class TemplateFinder:
             masks = [None]
             best_match = False
 
+        matches = []
         scores = [0] * len(templates)
         ref_points = [(0, 0)] * len(templates)
         recs = [[0, 0, 0, 0]] * len(templates)
@@ -128,6 +131,25 @@ class TemplateFinder:
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                     template = templates_gray[count]
                 res = cv2.matchTemplate(img, template, cv2.TM_CCOEFF_NORMED, mask=mask)
+
+                if every_matches:
+                    loc = np.where( res >= threshold)
+
+                    if len(loc) <= 0:
+                        return []
+
+                    for pt in zip(*loc[::-1]):
+                        ref_point = (pt[0] + int(template.shape[1] * 0.5) + rx, pt[1] + int(template.shape[0] * 0.5) + ry)
+                        ref_point = (int(ref_point[0] * (1.0 / scale)), int(ref_point[1] * (1.0 / scale)))
+                        rec = [int(pt[0] // scale), int(pt[1] // scale), int(template.shape[1] // scale), int(template.shape[0] // scale)]
+                        template_match.position = ref_point
+                        template_match.rec = rec
+                        template_match.valid = True
+                        matches.append(template_match)
+                        template_match = TemplateMatch()
+
+                    return matches
+
                 np.nan_to_num(res, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
                 _, max_val, _, max_pos = cv2.minMaxLoc(res)
                 if self._save_last_res:
@@ -141,6 +163,11 @@ class TemplateFinder:
                     if normalize_monitor:
                         ref_point =  self._screen.convert_screen_to_monitor(ref_point)
 
+                    template_match.position = ref_point
+                    template_match.score = max_val
+                    template_match.rec = rec
+                    template_match.valid = True
+
                     if best_match:
                         scores[count] = max_val
                         ref_points[count] = ref_point
@@ -148,10 +175,6 @@ class TemplateFinder:
                     else:
                         try: template_match.name = names[count]
                         except: pass
-                        template_match.position = ref_point
-                        template_match.score = max_val
-                        template_match.rec = rec
-                        template_match.valid = True
                         return template_match
 
         if len(scores) > 0 and max(scores) > 0:
@@ -162,8 +185,6 @@ class TemplateFinder:
             template_match.score = scores[idx]
             template_match.rec = recs[idx]
             template_match.valid = True
-        else:
-            template_match = TemplateMatch()
 
         return template_match
 
